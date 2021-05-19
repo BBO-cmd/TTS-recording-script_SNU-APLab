@@ -184,6 +184,96 @@ corpus_token_df = pd.DataFrame(d)[headers]
 corpus_token_df
 
 
+## vocabulary coverage
+
+import nltk
+import pandas as pd
+import numpy as np
+from nltk.tokenize import word_tokenize 
+from nltk.stem import WordNetLemmatizer
+nltk.download('averaged_perceptron_tagger')
+import re
+import os
+
+### 발성목록(or 비교 코퍼스) 단어 리스트 만들기 ###
+# 파일 불러와서 줄별로 리스트화
+with open("cnn_402k.txt", 'r', encoding= "utf-8") as corpus: 
+    lines = corpus.readlines()
+    
+# tokenize
+tokenized_sents = [word_tokenize(i) for i in lines]
+#print(tokenized_sents)
+
+
+# 단어 리스트
+flatten = []
+for item in tokenized_sents:
+    flatten.extend(item)
+    
+# lowering
+lower= []
+for i in flatten:
+    lower.append(i.lower())    
+
+
+# pos tagging
+postag = nltk.pos_tag(lower)    
+#print(postag)
+
+
+# Convert tuple(pos_tag) into dictionary
+def Convert(tup, di):
+    di = dict(tup)
+    return di
+      
+dictionary = {}
+pos_dict = Convert(postag, dictionary)
+#print(pos_dict)
+
+
+# lemmatizing_lemmatize 하지 않은 경우에는 사용하지 않음
+lemma = []
+n = WordNetLemmatizer()
+for key in pos_dict:
+    if pos_dict[key] in ['VB', 'VBD', 'VBG', 'VBN', 'VBP', 'VBZ']:
+        lemma.append(n.lemmatize(key, 'v'))
+    elif pos_dict[key] in ['JJ', 'JJR', 'JJS']:
+        lemma.append(n.lemmatize(key, 'a'))
+    else:
+        lemma.append(n.lemmatize(key))
+        
+#print(lemma)
+    
+# 대문자화
+upper = []
+for i in lemma:
+    upper.append(i.upper())
+    
+# 불필요한 것 제거
+list_all = []
+for i in upper:
+    text = re.sub('[^a-zA-Z0-9-]', ' ', i).strip()
+    if(text != ''):
+        list_all.append(text)
+
+list_all.sort()
+
+
+### frequent vocabulary 비교 ###
+# vocab 파일 불러와서 리스트화
+file = open("vocab_10000.txt", 'r', encoding = 'utf-8')
+list_vocab = file.read().split()
+list_vocab
+    
+# dataframe으로 만들어서 비교열 추가
+df = pd.DataFrame(list_vocab)
+df['OX'] = df[0].apply(lambda x : x in list_all)
+df
+
+df = df.sort_values(by=['OX'], axis=0)
+df.to_excel("vocab_lem_cnn402k_OX_10000.xlsx")
+
+
 
 ## biphone, triphone 커버리지
 
